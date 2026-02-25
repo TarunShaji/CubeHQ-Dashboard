@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus, Trash2, RefreshCw } from 'lucide-react'
+import { Plus, Trash2, RefreshCw, Link2 } from 'lucide-react'
 
 const STATUS_OPTIONS = ['To Be Started', 'In Progress', 'To Be Approved', 'Completed', 'Recurring', 'Blocked']
 const CATEGORY_OPTIONS = ['SEO & Content', 'Design', 'Development', 'Page Speed', 'Technical SEO', 'Link Building', 'Paid Ads', 'Email Marketing', 'LLM SEO', 'Reporting', 'Other']
