@@ -49,14 +49,22 @@ function EditableCell({ value, type = 'text', options = [], onSave, className = 
   }
 
   if (editing) {
-    if (type === 'select') {
+    if (type === 'select' || type === 'status' || type === 'priority') {
       return (
-        <Select value={val} onValueChange={v => { setVal(v); setEditing(false); if (v !== (value || '')) onSave(v) }}>
+        <Select
+          value={val || '__none__'}
+          onValueChange={v => {
+            const real = v === '__none__' ? '' : v
+            setVal(real); setEditing(false)
+            if (real !== (value || '')) onSave(real)
+          }}
+        >
           <SelectTrigger className="h-7 text-xs border-blue-400 shadow-sm min-w-[120px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {options.map(o => <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>)}
+            <SelectItem value="__none__" className="text-xs text-gray-400">(none)</SelectItem>
+            {options.filter(o => o !== '').map(o => <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>)}
           </SelectContent>
         </Select>
       )
