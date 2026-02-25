@@ -213,21 +213,21 @@ export default function AllTasksPage() {
         <Select value={filterClient} onValueChange={setFilterClient}>
           <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="All Clients" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="" className="text-xs">All Clients</SelectItem>
+            <SelectItem value="all" className="text-xs">All Clients</SelectItem>
             {clients.map(c => <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="All Statuses" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="" className="text-xs">All Statuses</SelectItem>
+            <SelectItem value="all" className="text-xs">All Statuses</SelectItem>
             {STATUS_OPTIONS.map(s => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="All Categories" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="" className="text-xs">All Categories</SelectItem>
+            <SelectItem value="all" className="text-xs">All Categories</SelectItem>
             {CATEGORY_OPTIONS.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
           </SelectContent>
         </Select>
