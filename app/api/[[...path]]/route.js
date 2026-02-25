@@ -443,6 +443,28 @@ async function handleRoute(request, { params }) {
       return handleCORS(NextResponse.json({ success: true }))
     }
 
+    // PORTAL: client sets approval status (no team auth needed)
+    const portalApprovalMatch = route.match(/^\/portal\/([^/]+)\/tasks\/([^/]+)\/approval$/)
+    if (portalApprovalMatch && method === 'PUT') {
+      const slug = portalApprovalMatch[1]
+      const taskId = portalApprovalMatch[2]
+      const body = await request.json()
+      const { client_approval } = body
+      const VALID = ['Pending Review', 'Approved', 'Required Changes']
+      if (!VALID.includes(client_approval)) {
+        return handleCORS(NextResponse.json({ error: 'Invalid approval value' }, { status: 400 }))
+      }
+      const clientDoc = await database.collection('clients').findOne({ slug, is_active: true })
+      if (!clientDoc) return handleCORS(NextResponse.json({ error: 'Client not found' }, { status: 404 }))
+      const task = await database.collection('tasks').findOne({ id: taskId, client_id: clientDoc.id })
+      if (!task) return handleCORS(NextResponse.json({ error: 'Task not found' }, { status: 404 }))
+      await database.collection('tasks').updateOne(
+        { id: taskId },
+        { $set: { client_approval, updated_at: new Date() } }
+      )
+      return handleCORS(NextResponse.json({ success: true, client_approval }))
+    }
+
     // ===== STATS =====
     if (route === '/stats' && method === 'GET') {
       const totalClients = await database.collection('clients').countDocuments({ is_active: true })
