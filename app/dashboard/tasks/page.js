@@ -107,11 +107,11 @@ export default function AllTasksPage() {
   const [addingTask, setAddingTask] = useState(false)
 
   // Filters
-  const [filterClient, setFilterClient] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [filterCategory, setFilterCategory] = useState('')
-  const [filterAssignee, setFilterAssignee] = useState('')
-  const [filterPriority, setFilterPriority] = useState('')
+  const [filterClient, setFilterClient] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterCategory, setFilterCategory] = useState('all')
+  const [filterAssignee, setFilterAssignee] = useState('all')
+  const [filterPriority, setFilterPriority] = useState('all')
   const [sortField, setSortField] = useState('updated_at')
   const [sortDir, setSortDir] = useState('desc')
 
