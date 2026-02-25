@@ -3,15 +3,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { apiFetch } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Plus, Trash2, Filter, RefreshCw, Link2 } from 'lucide-react'
+import { Plus, Trash2, RefreshCw } from 'lucide-react'
 
-const STATUSES = ['', 'To Be Started', 'In Progress', 'To Be Approved', 'Completed', 'Recurring', 'Blocked']
-const CATEGORIES = ['', 'SEO & Content', 'Design', 'Development', 'Page Speed', 'Technical SEO', 'Link Building', 'Paid Ads', 'Email Marketing', 'LLM SEO', 'Reporting', 'Other']
-const PRIORITIES = ['', 'P0', 'P1', 'P2', 'P3']
 const STATUS_OPTIONS = ['To Be Started', 'In Progress', 'To Be Approved', 'Completed', 'Recurring', 'Blocked']
 const CATEGORY_OPTIONS = ['SEO & Content', 'Design', 'Development', 'Page Speed', 'Technical SEO', 'Link Building', 'Paid Ads', 'Email Marketing', 'LLM SEO', 'Reporting', 'Other']
 const PRIORITY_OPTIONS = ['P0', 'P1', 'P2', 'P3']
@@ -31,7 +26,7 @@ const priorityColors = {
   'P3': 'bg-gray-100 text-gray-600',
 }
 
-function EditableCell({ value, type = 'text', options = [], onSave, className = '' }) {
+function EditableCell({ value, type = 'text', options = [], onSave }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(value || '')
   const inputRef = useRef(null)
@@ -47,12 +42,23 @@ function EditableCell({ value, type = 'text', options = [], onSave, className = 
   if (editing) {
     if (type === 'select' || type === 'status' || type === 'priority') {
       return (
-        <Select value={val} onValueChange={v => { setVal(v); setEditing(false); if (v !== (value || '')) onSave(v) }}>
+        <Select
+          value={val || '__none__'}
+          onValueChange={v => {
+            const realVal = v === '__none__' ? '' : v
+            setVal(realVal)
+            setEditing(false)
+            if (realVal !== (value || '')) onSave(realVal)
+          }}
+        >
           <SelectTrigger className="h-7 text-xs border-blue-400 shadow-sm min-w-[110px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {options.map(o => <SelectItem key={o} value={o || '_none'} className="text-xs">{o || '(none)'}</SelectItem>)}
+            <SelectItem value="__none__" className="text-xs text-gray-400">(none)</SelectItem>
+            {options.map(o => (
+              <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       )
@@ -68,7 +74,7 @@ function EditableCell({ value, type = 'text', options = [], onSave, className = 
           if (e.key === 'Enter') save()
           if (e.key === 'Escape') { setVal(value || ''); setEditing(false) }
         }}
-        className={`w-full px-2 py-1 text-xs border border-blue-400 rounded shadow-sm bg-white focus:outline-none min-w-[80px] ${className}`}
+        className="w-full px-2 py-1 text-xs border border-blue-400 rounded shadow-sm bg-white focus:outline-none min-w-[80px]"
       />
     )
   }
@@ -80,13 +86,13 @@ function EditableCell({ value, type = 'text', options = [], onSave, className = 
       title="Click to edit"
     >
       {type === 'status' ? (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
-          statusColors[val] || 'bg-gray-100 text-gray-600 border-gray-200'
-        }`}>{val || '—'}</span>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${statusColors[val] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+          {val || '—'}
+        </span>
       ) : type === 'priority' ? (
-        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold ${
-          priorityColors[val] || 'bg-gray-100 text-gray-600'
-        }`}>{val || '—'}</span>
+        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold ${priorityColors[val] || 'bg-gray-100 text-gray-600'}`}>
+          {val || '—'}
+        </span>
       ) : (
         <span className="text-xs text-gray-700 whitespace-nowrap">{val || <span className="text-gray-300">—</span>}</span>
       )}
@@ -101,12 +107,11 @@ export default function AllTasksPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState({})
   const [selected, setSelected] = useState([])
-  const [bulkAction, setBulkAction] = useState('')
-  const [showBulkBar, setShowBulkBar] = useState(false)
+  const [bulkAction, setBulkAction] = useState('__none__')
   const [newTask, setNewTask] = useState({ title: '', client_id: '' })
   const [addingTask, setAddingTask] = useState(false)
 
-  // Filters
+  // Filters – use sentinel 'all' so SelectItem never gets value=""
   const [filterClient, setFilterClient] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
@@ -117,19 +122,19 @@ export default function AllTasksPage() {
 
   const loadData = async () => {
     const params = new URLSearchParams()
-    if (filterClient && filterClient !== 'all') params.set('client_id', filterClient)
-    if (filterStatus && filterStatus !== 'all') params.set('status', filterStatus)
-    if (filterCategory && filterCategory !== 'all') params.set('category', filterCategory)
-    if (filterAssignee && filterAssignee !== 'all') params.set('assigned_to', filterAssignee)
-    if (filterPriority && filterPriority !== 'all') params.set('priority', filterPriority)
+    if (filterClient !== 'all') params.set('client_id', filterClient)
+    if (filterStatus !== 'all') params.set('status', filterStatus)
+    if (filterCategory !== 'all') params.set('category', filterCategory)
+    if (filterAssignee !== 'all') params.set('assigned_to', filterAssignee)
+    if (filterPriority !== 'all') params.set('priority', filterPriority)
 
     const [tasksRes, clientsRes, membersRes] = await Promise.all([
       apiFetch(`/api/tasks?${params.toString()}`),
       apiFetch('/api/clients'),
-      apiFetch('/api/team')
+      apiFetch('/api/team'),
     ])
     const [tasksData, clientsData, membersData] = await Promise.all([
-      tasksRes.json(), clientsRes.json(), membersRes.json()
+      tasksRes.json(), clientsRes.json(), membersRes.json(),
     ])
     setTasks(tasksData || [])
     setClients(clientsData || [])
@@ -152,19 +157,17 @@ export default function AllTasksPage() {
     setTasks(ts => ts.filter(t => t.id !== taskId))
   }
 
-  const toggleSelect = (id) => {
-    setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
-  }
+  const toggleSelect = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
 
   const handleBulkAction = async () => {
-    if (!bulkAction || selected.length === 0) return
+    if (!bulkAction || bulkAction === '__none__' || selected.length === 0) return
     const [field, value] = bulkAction.split(':')
     await apiFetch('/api/tasks/bulk-update', {
       method: 'POST',
-      body: JSON.stringify({ task_ids: selected, updates: { [field]: value } })
+      body: JSON.stringify({ task_ids: selected, updates: { [field]: value } }),
     })
     setSelected([])
-    setBulkAction('')
+    setBulkAction('__none__')
     loadData()
   }
 
@@ -178,12 +181,12 @@ export default function AllTasksPage() {
     setAddingTask(false)
   }
 
-  const clientMap = Object.fromEntries(clients.map(c => [c.id, c.name]))
   const memberMap = Object.fromEntries(members.map(m => [m.id, m.name]))
+  const anyFilter = filterClient !== 'all' || filterStatus !== 'all' || filterCategory !== 'all' || filterAssignee !== 'all' || filterPriority !== 'all'
 
   const sorted = [...tasks].sort((a, b) => {
-    let va = a[sortField] || ''
-    let vb = b[sortField] || ''
+    const va = a[sortField] || ''
+    const vb = b[sortField] || ''
     return sortDir === 'asc' ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va))
   })
 
@@ -217,6 +220,7 @@ export default function AllTasksPage() {
             {clients.map(c => <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
+
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="All Statuses" /></SelectTrigger>
           <SelectContent>
@@ -224,6 +228,7 @@ export default function AllTasksPage() {
             {STATUS_OPTIONS.map(s => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
           </SelectContent>
         </Select>
+
         <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="All Categories" /></SelectTrigger>
           <SelectContent>
@@ -231,25 +236,30 @@ export default function AllTasksPage() {
             {CATEGORY_OPTIONS.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
           </SelectContent>
         </Select>
+
         <Select value={filterAssignee} onValueChange={setFilterAssignee}>
           <SelectTrigger className="h-8 text-xs w-36"><SelectValue placeholder="All Members" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="" className="text-xs">All Members</SelectItem>
+            <SelectItem value="all" className="text-xs">All Members</SelectItem>
             {members.map(m => <SelectItem key={m.id} value={m.id} className="text-xs">{m.name}</SelectItem>)}
           </SelectContent>
         </Select>
+
         <Select value={filterPriority} onValueChange={setFilterPriority}>
           <SelectTrigger className="h-8 text-xs w-28"><SelectValue placeholder="All Priority" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="" className="text-xs">All Priority</SelectItem>
+            <SelectItem value="all" className="text-xs">All Priority</SelectItem>
             {PRIORITY_OPTIONS.map(p => <SelectItem key={p} value={p} className="text-xs">{p}</SelectItem>)}
           </SelectContent>
         </Select>
-        {(filterClient || filterStatus || filterCategory || filterAssignee || filterPriority) && (
+
+        {anyFilter && (
           <Button variant="ghost" size="sm" className="h-8 text-xs text-gray-400" onClick={() => {
-            setFilterClient(''); setFilterStatus(''); setFilterCategory('')
-            setFilterAssignee(''); setFilterPriority('')
-          }}>Clear filters</Button>
+            setFilterClient('all'); setFilterStatus('all'); setFilterCategory('all')
+            setFilterAssignee('all'); setFilterPriority('all')
+          }}>
+            Clear filters
+          </Button>
         )}
       </div>
 
@@ -258,17 +268,18 @@ export default function AllTasksPage() {
         <div className="flex items-center gap-3 mb-3 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
           <span className="text-sm text-blue-700 font-medium">{selected.length} selected</span>
           <Select value={bulkAction} onValueChange={setBulkAction}>
-            <SelectTrigger className="h-7 text-xs w-44 bg-white">
+            <SelectTrigger className="h-7 text-xs w-48 bg-white">
               <SelectValue placeholder="Bulk action..." />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__none__" className="text-xs text-gray-400">Choose action…</SelectItem>
               <SelectItem value="status:In Progress" className="text-xs">Set: In Progress</SelectItem>
               <SelectItem value="status:Completed" className="text-xs">Set: Completed</SelectItem>
               <SelectItem value="status:Blocked" className="text-xs">Set: Blocked</SelectItem>
               <SelectItem value="status:To Be Approved" className="text-xs">Set: To Be Approved</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" className="h-7 text-xs" onClick={handleBulkAction} disabled={!bulkAction}>Apply</Button>
+          <Button size="sm" className="h-7 text-xs" onClick={handleBulkAction} disabled={bulkAction === '__none__'}>Apply</Button>
           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setSelected([])}>Clear</Button>
         </div>
       )}
@@ -287,7 +298,7 @@ export default function AllTasksPage() {
               <th className="text-left px-3 py-2.5 font-semibold text-gray-600 cursor-pointer hover:text-gray-900 w-28" onClick={() => handleSort('client_name')}>
                 Client <SortIcon field="client_name" />
               </th>
-              <th className="text-left px-3 py-2.5 font-semibold text-gray-600 cursor-pointer hover:text-gray-900" style={{minWidth:'160px'}} onClick={() => handleSort('title')}>
+              <th className="text-left px-3 py-2.5 font-semibold text-gray-600 cursor-pointer hover:text-gray-900" style={{ minWidth: '160px' }} onClick={() => handleSort('title')}>
                 Task <SortIcon field="title" />
               </th>
               <th className="text-left px-3 py-2.5 font-semibold text-gray-600">Category</th>
@@ -311,9 +322,7 @@ export default function AllTasksPage() {
             ) : sorted.length === 0 ? (
               <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">No tasks found</td></tr>
             ) : sorted.map(task => (
-              <tr key={task.id} className={`hover:bg-gray-50 group ${
-                selected.includes(task.id) ? 'bg-blue-50' : ''
-              }`}>
+              <tr key={task.id} className={`hover:bg-gray-50 group ${selected.includes(task.id) ? 'bg-blue-50' : ''}`}>
                 <td className="px-3 py-1.5">
                   <Checkbox checked={selected.includes(task.id)} onCheckedChange={() => toggleSelect(task.id)} />
                 </td>
@@ -338,7 +347,7 @@ export default function AllTasksPage() {
                   <EditableCell
                     value={memberMap[task.assigned_to] || ''}
                     type="select"
-                    options={['', ...members.map(m => m.name)]}
+                    options={members.map(m => m.name)}
                     onSave={v => {
                       const member = members.find(m => m.name === v)
                       updateTask(task.id, 'assigned_to', member?.id || null)
@@ -361,13 +370,18 @@ export default function AllTasksPage() {
                 </td>
               </tr>
             ))}
-            {/* Add Row */}
+
+            {/* Quick Add Row */}
             <tr className="bg-gray-50 border-t border-dashed border-gray-200">
               <td className="px-3 py-2"></td>
               <td className="px-3 py-2">
-                <Select value={newTask.client_id} onValueChange={v => setNewTask(n => ({ ...n, client_id: v }))}>
+                <Select
+                  value={newTask.client_id || '__none__'}
+                  onValueChange={v => setNewTask(n => ({ ...n, client_id: v === '__none__' ? '' : v }))}
+                >
                   <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Client" /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__none__" className="text-xs text-gray-400">Select client…</SelectItem>
                     {clients.map(c => <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -384,7 +398,11 @@ export default function AllTasksPage() {
                 />
               </td>
               <td colSpan={6} className="px-3 py-2">
-                <Button size="sm" variant="ghost" onClick={addTask} disabled={addingTask || !newTask.title.trim() || !newTask.client_id} className="text-xs h-7">
+                <Button
+                  size="sm" variant="ghost" onClick={addTask}
+                  disabled={addingTask || !newTask.title.trim() || !newTask.client_id || newTask.client_id === '__none__'}
+                  className="text-xs h-7"
+                >
                   <Plus className="w-3 h-3 mr-1" />{addingTask ? 'Adding...' : 'Add'}
                 </Button>
               </td>
