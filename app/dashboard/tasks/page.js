@@ -360,6 +360,27 @@ export default function AllTasksPage() {
                   <EditableCell value={task.eta_end} type="date" onSave={v => updateTask(task.id, 'eta_end', v)} />
                 </td>
                 <td className="px-3 py-1.5">
+                  {/* Client Approval badge (read-only in internal view — team sets it via client detail) */}
+                  {task.client_approval && task.client_approval !== 'Pending Review' ? (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
+                      task.client_approval === 'Approved'
+                        ? 'bg-green-100 text-green-700 border-green-200'
+                        : 'bg-red-100 text-red-700 border-red-200'
+                    }`}>{task.client_approval}</span>
+                  ) : (
+                    <span className="text-xs text-gray-300">Pending</span>
+                  )}
+                </td>
+                <td className="px-3 py-1.5">
+                  {task.link_url ? (
+                    <a href={task.link_url} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-medium">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                      Link
+                    </a>
+                  ) : <span className="text-xs text-gray-300">—</span>}
+                </td>
+                <td className="px-3 py-1.5">
                   <EditableCell value={task.remarks} onSave={v => updateTask(task.id, 'remarks', v)} />
                 </td>
                 <td className="px-3 py-1.5">
