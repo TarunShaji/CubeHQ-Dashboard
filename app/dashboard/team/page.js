@@ -31,11 +31,16 @@ export default function TeamPage() {
   const [tab, setTab] = useState('members') // 'members' | 'tasks'
 
   const loadData = async () => {
-    const [mr, tr] = await Promise.all([apiFetch('/api/team'), apiFetch('/api/tasks')])
-    const [m, t] = await Promise.all([mr.json(), tr.json()])
-    setMembers(m || [])
-    setTasks(t || [])
-    setLoading(false)
+    try {
+      const [mr, tr] = await Promise.all([apiFetch('/api/team'), apiFetch('/api/tasks')])
+      const [m, t] = await Promise.all([mr.json(), tr.json()])
+      setMembers(Array.isArray(m) ? m : [])
+      setTasks(Array.isArray(t) ? t : [])
+    } catch (e) {
+      console.error('Failed to load team data', e)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { loadData() }, [])
