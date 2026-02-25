@@ -117,8 +117,8 @@ export default function AllTasksPage() {
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterAssignee, setFilterAssignee] = useState('all')
   const [filterPriority, setFilterPriority] = useState('all')
-  const [sortField, setSortField] = useState('updated_at')
-  const [sortDir, setSortDir] = useState('desc')
+  const [sortField, setSortField] = useState('created_at')
+  const [sortDir, setSortDir]     = useState('desc')
 
   const loadData = async () => {
     const params = new URLSearchParams()
