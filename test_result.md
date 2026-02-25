@@ -343,3 +343,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Built complete Agency Dashboard MVP. Fixed SelectItem empty string error in tasks page and client detail page. All pages verified via screenshots. Core features working: login, dashboard, clients list, client detail with timeline tracker (inline editing), all tasks spreadsheet view with filters, team view, reports, CSV import, and client portal."
+  - agent: "testing"
+    message: "Completed comprehensive backend API testing. Created backend_test.py with 15 test cases covering all endpoints. All tests PASSED: seed data, auth login (JWT), clients CRUD with task counts, tasks CRUD with filters/bulk updates, team members API (password_hash properly excluded), reports with client enrichment, dashboard stats, client portals (Bandolier public, Behno password-protected). Backend API is fully functional and secure."
