@@ -47,7 +47,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
             <LayoutDashboard className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Agency Dashboard</h1>
+          <h1 className="text-3xl font-bold text-white">CubeHQ Dashboard</h1>
           <p className="text-slate-400 mt-2">Sign in to manage your clients and tasks</p>
         </div>
         <Card className="border-0 shadow-2xl">

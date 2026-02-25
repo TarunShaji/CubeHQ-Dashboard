@@ -157,7 +157,7 @@ export default function ClientPortalPage() {
               </div>
               <div>
                 <h1 className="font-bold text-gray-900">{client.name}</h1>
-                <p className="text-xs text-gray-400">{client.service_type} • Agency Dashboard</p>
+                <p className="text-xs text-gray-400">{client.service_type} • CubeHQ</p>
               </div>
             </div>
             <div className="text-right">
@@ -311,7 +311,7 @@ export default function ClientPortalPage() {
         </Tabs>
 
         <div className="mt-8 text-center text-xs text-gray-300">
-          Powered by Agency Hub
+          Powered by CubeHQ
         </div>
       </div>
     </div>

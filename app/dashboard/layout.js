@@ -58,7 +58,7 @@ export default function DashboardLayout({ children }) {
               <LayoutDashboard className="w-4 h-4 text-white" />
             </div>
             {sidebarOpen && (
-              <span className="font-bold text-gray-900 truncate">Agency Hub</span>
+              <span className="font-bold text-gray-900 truncate">CubeHQ</span>
             )}
           </div>
           <button
