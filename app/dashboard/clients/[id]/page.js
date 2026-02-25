@@ -134,9 +134,9 @@ export default function ClientDetailPage() {
     ])
     setClient(clientData)
     setSettingsForm(clientData)
-    setTasks(tasksData || [])
-    setReports(reportsData || [])
-    setMembers(membersData || [])
+    setTasks(Array.isArray(tasksData) ? tasksData : [])
+    setReports(Array.isArray(reportsData) ? reportsData : [])
+    setMembers(Array.isArray(membersData) ? membersData : [])
     setLoading(false)
   }
 
