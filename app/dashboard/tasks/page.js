@@ -320,9 +320,9 @@ export default function AllTasksPage() {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (
-              <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+              <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
             ) : sorted.length === 0 ? (
-              <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">No tasks found</td></tr>
+              <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-400">No tasks found</td></tr>
             ) : sorted.map(task => (
               <tr key={task.id} className={`hover:bg-gray-50 group ${selected.includes(task.id) ? 'bg-blue-50' : ''}`}>
                 <td className="px-3 py-1.5">
