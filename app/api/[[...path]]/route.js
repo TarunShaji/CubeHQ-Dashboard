@@ -453,8 +453,160 @@ async function handleRoute(request, { params }) {
       return handleCORS(NextResponse.json({ totalClients, inProgress, toBeApproved, blocked, completed, recentActivity: enrichedRecent }))
     }
 
+    // ===== CLICKUP ROUTES =====
+
+    // GET workspaces
+    if (route === '/clickup/workspaces' && method === 'POST') {
+      const user = verifyToken(request)
+      if (!user) return handleCORS(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+      const body = await request.json()
+      const { token } = body
+      if (!token) return handleCORS(NextResponse.json({ error: 'ClickUp token required' }, { status: 400 }))
+      const resp = await fetch('https://api.clickup.com/api/v2/team', {
+        headers: { 'Authorization': token, 'Content-Type': 'application/json' }
+      })
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}))
+        return handleCORS(NextResponse.json({ error: err.err || 'Invalid ClickUp token or no access' }, { status: 400 }))
+      }
+      const data = await resp.json()
+      const workspaces = (data.teams || []).map(t => ({ id: t.id, name: t.name }))
+      return handleCORS(NextResponse.json({ workspaces }))
+    }
+
+    // GET lists from workspace (all spaces + folders + lists)
+    if (route === '/clickup/lists' && method === 'POST') {
+      const user = verifyToken(request)
+      if (!user) return handleCORS(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+      const body = await request.json()
+      const { token, workspace_id } = body
+      if (!token || !workspace_id) return handleCORS(NextResponse.json({ error: 'token and workspace_id required' }, { status: 400 }))
+
+      const headers = { 'Authorization': token, 'Content-Type': 'application/json' }
+      // Get spaces
+      const spacesResp = await fetch(`https://api.clickup.com/api/v2/team/${workspace_id}/space?archived=false`, { headers })
+      if (!spacesResp.ok) return handleCORS(NextResponse.json({ error: 'Failed to fetch spaces' }, { status: 400 }))
+      const spacesData = await spacesResp.json()
+      const spaces = spacesData.spaces || []
+
+      const allLists = []
+      for (const space of spaces) {
+        // Get folders
+        const foldersResp = await fetch(`https://api.clickup.com/api/v2/space/${space.id}/folder?archived=false`, { headers })
+        if (foldersResp.ok) {
+          const foldersData = await foldersResp.json()
+          for (const folder of (foldersData.folders || [])) {
+            for (const list of (folder.lists || [])) {
+              allLists.push({ id: list.id, name: list.name, space_name: space.name, folder_name: folder.name })
+            }
+          }
+        }
+        // Get folderless lists
+        const listsResp = await fetch(`https://api.clickup.com/api/v2/space/${space.id}/list?archived=false`, { headers })
+        if (listsResp.ok) {
+          const listsData = await listsResp.json()
+          for (const list of (listsData.lists || [])) {
+            allLists.push({ id: list.id, name: list.name, space_name: space.name, folder_name: null })
+          }
+        }
+      }
+      return handleCORS(NextResponse.json({ lists: allLists }))
+    }
+
+    // IMPORT tasks from selected lists
+    if (route === '/clickup/import' && method === 'POST') {
+      const user = verifyToken(request)
+      if (!user) return handleCORS(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+      const body = await request.json()
+      const { token, list_ids, client_id, members = [] } = body
+      if (!token || !list_ids?.length || !client_id) {
+        return handleCORS(NextResponse.json({ error: 'token, list_ids, client_id required' }, { status: 400 }))
+      }
+
+      const headers = { 'Authorization': token, 'Content-Type': 'application/json' }
+      const CU_STATUS = {
+        'to do': 'To Be Started', 'open': 'To Be Started', 'not started': 'To Be Started',
+        'in progress': 'In Progress', 'active': 'In Progress',
+        'in review': 'To Be Approved', 'review': 'To Be Approved', 'approval': 'To Be Approved',
+        'complete': 'Completed', 'done': 'Completed', 'closed': 'Completed',
+        'blocked': 'Blocked', 'on hold': 'Blocked',
+        'recurring': 'Recurring',
+      }
+      const mapStatus = (s) => CU_STATUS[s?.toLowerCase()?.trim()] || 'To Be Started'
+      const membersByName = Object.fromEntries(members.map(m => [m.name.toLowerCase(), m.id]))
+
+      let imported = 0, skipped = 0, errors = []
+
+      for (const listId of list_ids) {
+        let page = 0
+        while (true) {
+          const tasksResp = await fetch(
+            `https://api.clickup.com/api/v2/list/${listId}/task?archived=false&include_closed=true&page=${page}&limit=100`,
+            { headers }
+          )
+          if (!tasksResp.ok) { errors.push(`List ${listId} failed`); break }
+          const tasksData = await tasksResp.json()
+          const tasks = tasksData.tasks || []
+          if (tasks.length === 0) break
+
+          for (const t of tasks) {
+            try {
+              // Find assignee in our team
+              const assigneeName = t.assignees?.[0]?.username || t.assignees?.[0]?.email?.split('@')[0] || null
+              const assignedTo = assigneeName ? (membersByName[assigneeName.toLowerCase()] || null) : null
+
+              // Parse due date
+              let etaEnd = null
+              if (t.due_date) {
+                try { etaEnd = new Date(parseInt(t.due_date)).toISOString().split('T')[0] } catch {}
+              }
+
+              const taskDoc = {
+                id: uuidv4(),
+                client_id,
+                title: t.name || 'Untitled',
+                description: t.description || null,
+                category: 'Other',
+                status: mapStatus(t.status?.status || 'to do'),
+                priority: 'P2',
+                assigned_to: assignedTo,
+                duration_days: null,
+                eta_start: null,
+                eta_end: etaEnd,
+                remarks: null,
+                link_url: t.url || null,
+                clickup_id: t.id,
+                created_at: new Date(),
+                updated_at: new Date()
+              }
+              await database.collection('tasks').insertOne(taskDoc)
+              imported++
+            } catch (e) {
+              errors.push(`Task ${t.id}: ${e.message}`)
+              skipped++
+            }
+          }
+          if (tasks.length < 100) break
+          page++
+          await new Promise(r => setTimeout(r, 100)) // rate limit courtesy
+        }
+      }
+
+      return handleCORS(NextResponse.json({ imported, skipped, errors: errors.slice(0, 10) }))
+    }
+
+    // ===== UPDATE ADMIN EMAIL =====
+    if (route === '/admin/update-email' && method === 'POST') {
+      const user = verifyToken(request)
+      if (!user || user.role !== 'Admin') return handleCORS(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+      const body = await request.json()
+      const { old_email, new_email } = body
+      await database.collection('team_members').updateOne({ email: old_email }, { $set: { email: new_email } })
+      return handleCORS(NextResponse.json({ message: 'Email updated' }))
+    }
+
     if (route === '/' && method === 'GET') {
-      return handleCORS(NextResponse.json({ message: 'Agency Dashboard API v1.0' }))
+      return handleCORS(NextResponse.json({ message: 'CubeHQ Dashboard API v1.0' }))
     }
 
     return handleCORS(NextResponse.json({ error: `Route ${route} not found` }, { status: 404 }))
