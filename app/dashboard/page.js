@@ -20,10 +20,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiFetch('/api/stats').then(r => r.json()).then(data => {
-      setStats(data)
-      setLoading(false)
-    }).catch(() => setLoading(false))
+    apiFetch('/api/stats')
+      .then(r => r.json())
+      .then(data => {
+        if (data && !data.error) setStats(data)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
   }, [])
 
   if (loading) return (
