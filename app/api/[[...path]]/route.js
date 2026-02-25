@@ -8,7 +8,8 @@ import bcrypt from 'bcryptjs'
 let client
 let db
 
-const JWT_SECRET = process.env.JWT_SECRET || 'agency-dashboard-secret-key-2025'
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required')
 const DB_NAME = process.env.DB_NAME || 'agency_dashboard'
 
 async function connectToMongo() {
