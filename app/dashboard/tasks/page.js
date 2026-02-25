@@ -117,11 +117,11 @@ export default function AllTasksPage() {
 
   const loadData = async () => {
     const params = new URLSearchParams()
-    if (filterClient) params.set('client_id', filterClient)
-    if (filterStatus) params.set('status', filterStatus)
-    if (filterCategory) params.set('category', filterCategory)
-    if (filterAssignee) params.set('assigned_to', filterAssignee)
-    if (filterPriority) params.set('priority', filterPriority)
+    if (filterClient && filterClient !== 'all') params.set('client_id', filterClient)
+    if (filterStatus && filterStatus !== 'all') params.set('status', filterStatus)
+    if (filterCategory && filterCategory !== 'all') params.set('category', filterCategory)
+    if (filterAssignee && filterAssignee !== 'all') params.set('assigned_to', filterAssignee)
+    if (filterPriority && filterPriority !== 'all') params.set('priority', filterPriority)
 
     const [tasksRes, clientsRes, membersRes] = await Promise.all([
       apiFetch(`/api/tasks?${params.toString()}`),
