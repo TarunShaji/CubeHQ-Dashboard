@@ -12,10 +12,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'agency-dashboard-secret-key-2025'
 const DB_NAME = process.env.DB_NAME || 'agency_dashboard'
 
 async function connectToMongo() {
-  if (!client) {
-    client = new MongoClient(process.env.MONGO_URL)
-    await client.connect()
-    db = client.db(DB_NAME)
+  if (!client || !db) {
+    try {
+      client = new MongoClient(process.env.MONGO_URL)
+      await client.connect()
+      db = client.db(DB_NAME)
+    } catch (e) {
+      client = null
+      db = null
+      throw e
+    }
   }
   return db
 }
