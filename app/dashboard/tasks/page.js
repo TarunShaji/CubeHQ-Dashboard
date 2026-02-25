@@ -312,6 +312,8 @@ export default function AllTasksPage() {
               <th className="text-left px-3 py-2.5 font-semibold text-gray-600 cursor-pointer hover:text-gray-900" onClick={() => handleSort('eta_end')}>
                 ETA <SortIcon field="eta_end" />
               </th>
+              <th className="text-left px-3 py-2.5 font-semibold text-gray-600">Client Approval</th>
+              <th className="text-left px-3 py-2.5 font-semibold text-gray-600">Link</th>
               <th className="text-left px-3 py-2.5 font-semibold text-gray-600">Remarks</th>
               <th className="px-3 py-2.5 w-8"></th>
             </tr>
