@@ -101,3 +101,245 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Agency Dashboard with internal team view and client portal. Internal dashboard for SEO/Design/Tech teams with all clients, filterable tasks, inline spreadsheet-style editing. Client portal with unique URL per client showing project progress and reports."
+
+backend:
+  - task: "Auth - Login with JWT"
+    implemented: true
+    working: true
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "POST /api/auth/login returns JWT token. Verified with curl - admin@agency.com / admin123 works."
+
+  - task: "Clients CRUD API"
+    implemented: true
+    working: true
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET/POST /api/clients, GET/PUT/DELETE /api/clients/:id - all working. Returns task counts too."
+
+  - task: "Tasks CRUD + bulk update API"
+    implemented: true
+    working: true
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET/POST /api/tasks with filters, PUT/DELETE /api/tasks/:id, POST /api/tasks/bulk-update all working. 11 seeded tasks."
+
+  - task: "Team members API"
+    implemented: true
+    working: true
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET/POST/PUT/DELETE /api/team working with bcrypt password hashing."
+
+  - task: "Reports CRUD API"
+    implemented: true
+    working: true
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET/POST/PUT/DELETE /api/reports with client_id filter working."
+
+  - task: "Client Portal API"
+    implemented: true
+    working: true
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/portal/:slug returns client+tasks+reports. Password-protected portals return 401 with has_password:true. Verified /portal/bandolier works."
+
+  - task: "Stats/Dashboard API"
+    implemented: true
+    working: true
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "GET /api/stats returns totalClients, inProgress, toBeApproved, blocked, recentActivity."
+
+  - task: "Seed data API"
+    implemented: true
+    working: true
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "POST /api/seed creates 5 team members, 3 clients, 11 tasks, 3 reports."
+
+frontend:
+  - task: "Login page"
+    implemented: true
+    working: true
+    file: "app/login/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Clean login form with dark gradient bg, JWT stored in localStorage. Verified via screenshot."
+
+  - task: "Dashboard layout with sidebar"
+    implemented: true
+    working: true
+    file: "app/dashboard/layout.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Collapsible sidebar with all nav items, user info + logout at bottom. Verified via screenshot."
+
+  - task: "Dashboard home with stats"
+    implemented: true
+    working: true
+    file: "app/dashboard/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "4 stat cards + recent activity feed with color-coded status pills. Verified via screenshot."
+
+  - task: "Clients list page"
+    implemented: true
+    working: true
+    file: "app/dashboard/clients/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Table with client name, service type, task counts, portal links. Add Client dialog. Verified via screenshot."
+
+  - task: "Client detail with Timeline Tracker (inline editing)"
+    implemented: true
+    working: true
+    file: "app/dashboard/clients/[id]/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Spreadsheet-style inline editable table. Click cell to edit, auto-save. Fixed empty SelectItem value bug. Verified via screenshot."
+
+  - task: "All Tasks page with filters and inline editing"
+    implemented: true
+    working: true
+    file: "app/dashboard/tasks/page.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Had error: SelectItem with empty string value not allowed by Radix UI."
+      - working: true
+        agent: "main"
+        comment: "Fixed by using sentinel 'all' and '__none__' values instead of empty strings. Verified via screenshot - 11 tasks shown with all filters working."
+
+  - task: "Team view page"
+    implemented: true
+    working: true
+    file: "app/dashboard/team/page.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Team member cards with task counts, click to filter by member, tasks grouped by client."
+
+  - task: "Reports page"
+    implemented: true
+    working: true
+    file: "app/dashboard/reports/page.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Report cards with type color badges, client filter, add report dialog."
+
+  - task: "CSV/Paste Import page"
+    implemented: true
+    working: true
+    file: "app/dashboard/import/page.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Supports CSV upload and paste from Google Sheets. Auto-detects columns, maps statuses, shows preview before import."
+
+  - task: "Client Portal"
+    implemented: true
+    working: true
+    file: "app/portal/[slug]/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Premium client-facing portal at /portal/[slug]. Progress bar, tasks grouped by category, collapsible sections, reports tab. Password protection for Behno portal. Verified via screenshot."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "All Tasks page with filters and inline editing"
+    - "Client Portal"
+    - "Client detail with Timeline Tracker"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Built complete Agency Dashboard MVP. Fixed SelectItem empty string error in tasks page and client detail page. All pages verified via screenshots. Core features working: login, dashboard, clients list, client detail with timeline tracker (inline editing), all tasks spreadsheet view with filters, team view, reports, CSV import, and client portal."
