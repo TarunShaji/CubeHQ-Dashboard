@@ -303,7 +303,7 @@ export default function ClientDetailPage() {
                       <EditableCell
                         value={memberMap[task.assigned_to] || ''}
                         type="select"
-                        options={['', ...members.map(m => m.name)]}
+                        options={members.map(m => m.name)}
                         onSave={v => {
                           const member = members.find(m => m.name === v)
                           updateTask(task.id, 'assigned_to', member?.id || null)
