@@ -247,7 +247,7 @@ async function handleRoute(request, { params }) {
       const task = {
         id: uuidv4(),
         client_id,
-        title,
+        title: title.trim().toLowerCase(), // Enforce lowercase for index protection
         description: body.description || null,
         category: body.category || 'Other',
         status: body.status || 'To Be Started',
@@ -263,6 +263,61 @@ async function handleRoute(request, { params }) {
       }
       await database.collection('tasks').insertOne(task)
       return handleCORS(NextResponse.json(task))
+    }
+
+    if (route === '/tasks/bulk' && method === 'POST') {
+      const user = verifyToken(request)
+      if (!user) return handleCORS(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
+      const body = await request.json()
+      const { tasks } = body
+      if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
+        return handleCORS(NextResponse.json({ error: 'Tasks array required' }, { status: 400 }))
+      }
+
+      // Get existing tasks for these clients to prevent duplicates
+      const clientIds = [...new Set(tasks.map(t => t.client_id))]
+      const existing = await database.collection('tasks').find({ client_id: { $in: clientIds } }).toArray()
+      const existingKeySet = new Set(existing.map(t => `${t.client_id}:${t.title.toLowerCase().trim()}`))
+
+      const toInsert = []
+      const skipped = []
+
+      for (const t of tasks) {
+        const titleClean = t.title.toLowerCase().trim()
+        const key = `${t.client_id}:${titleClean}`
+        if (existingKeySet.has(key)) {
+          skipped.push(t.title)
+        } else {
+          toInsert.push({
+            id: uuidv4(),
+            client_id: t.client_id,
+            title: titleClean,
+            description: t.description || null,
+            category: t.category || 'Other',
+            status: t.status || 'To Be Started',
+            priority: t.priority || 'P2',
+            assigned_to: t.assigned_to || null,
+            duration_days: t.duration_days || null,
+            eta_start: t.eta_start || null,
+            eta_end: t.eta_end || null,
+            remarks: t.remarks || null,
+            link_url: t.link_url || null,
+            created_at: new Date(),
+            updated_at: new Date()
+          })
+          existingKeySet.add(key) // Prevent duplicates within the same batch
+        }
+      }
+
+      if (toInsert.length > 0) {
+        await database.collection('tasks').insertMany(toInsert)
+      }
+
+      return handleCORS(NextResponse.json({
+        inserted: toInsert.length,
+        skipped: skipped.length,
+        duplicates: skipped
+      }))
     }
 
     const taskByIdMatch = route.match(/^\/tasks\/([^/]+)$/)
@@ -587,7 +642,7 @@ async function handleRoute(request, { params }) {
               // Parse due date
               let etaEnd = null
               if (t.due_date) {
-                try { etaEnd = new Date(parseInt(t.due_date)).toISOString().split('T')[0] } catch {}
+                try { etaEnd = new Date(parseInt(t.due_date)).toISOString().split('T')[0] } catch { }
               }
 
               const taskDoc = {

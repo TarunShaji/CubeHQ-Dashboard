@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Papa from 'papaparse'
 import { apiFetch } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,28 +23,23 @@ const STATUS_MAP = {
 function mapStatus(s) { return s ? (STATUS_MAP[s.toLowerCase().trim()] || 'To Be Started') : 'To Be Started' }
 
 function parseCSV(text) {
-  const lines = text.split('\n').filter(l => l.trim())
-  if (lines.length < 2) return null
-  const sep = text.includes('\t') ? '\t' : ','
-  const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
-  const rows = lines.slice(1).map(line => {
-    const vals = line.split(sep).map(v => v.trim().replace(/^"|"$/g, ''))
-    return Object.fromEntries(headers.map((h, i) => [h, vals[i] || '']))
-  }).filter(r => Object.values(r).some(v => v))
-  return { headers, rows }
+  const result = Papa.parse(text, { header: true, skipEmptyLines: true, transformHeader: h => h.trim().toLowerCase() })
+  if (!result.data || result.data.length === 0) return null
+  return { headers: result.meta.fields, rows: result.data }
 }
 
 function rowToTask(row, headers, clientId) {
-  const h = (keywords) => headers.find(h => keywords.some(k => h.includes(k))) || ''
-  const titleField = h(['to-do', 'todo', 'task', 'title', 'name']) || headers[0]
+  const findHeader = (keywords) => headers.find(h => keywords.some(k => h.includes(k))) || ''
+  const titleField = findHeader(['to-do', 'todo', 'task', 'title', 'name']) || headers[0]
+
   return {
     client_id: clientId,
     title: row[titleField] || '',
-    status: mapStatus(row[h(['status'])] || ''),
-    category: row[h(['category', 'type'])] || 'Other',
-    duration_days: row[h(['duration', 'days'])] || '',
-    remarks: row[h(['remark', 'note', 'comment'])] || '',
-    eta_end: row[h(['eta', 'due', 'deadline', 'date'])] || null,
+    status: mapStatus(row[findHeader(['status'])] || ''),
+    category: row[findHeader(['category', 'type'])] || 'Other',
+    duration_days: row[findHeader(['duration', 'days'])] || '',
+    remarks: row[findHeader(['remark', 'note', 'comment'])] || '',
+    eta_end: row[findHeader(['eta', 'due', 'deadline', 'date'])] || null,
     priority: 'P2',
   }
 }
@@ -113,16 +109,32 @@ function CSVImport({ clients }) {
     setImporting(true)
     const tasks = parsed.rows
       .map(row => rowToTask(row, parsed.headers, selectedClient))
-      .filter(t => t.title.trim())
-    let success = 0, failed = 0
-    for (const task of tasks) {
-      const res = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(task) })
-      if (res.ok) success++; else failed++
+      .filter(t => t.title && t.title.trim())
+
+    if (tasks.length === 0) {
+      alert('No valid tasks found in the data')
+      setImporting(false)
+      return
     }
-    setResult({ success, failed, total: tasks.length })
-    setImporting(false)
-    setParsed(null)
-    setRawData('')
+
+    try {
+      const res = await apiFetch('/api/tasks/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ tasks })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setResult({ success: data.inserted, skipped: data.skipped, duplicates: data.duplicates, total: tasks.length })
+      } else {
+        alert(data.error || 'Import failed')
+      }
+    } catch (err) {
+      alert('An error occurred during import')
+    } finally {
+      setImporting(false)
+      setParsed(null)
+      setRawData('')
+    }
   }
 
   return (
@@ -135,7 +147,17 @@ function CSVImport({ clients }) {
               <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
               <div>
                 <p className="text-sm font-medium">{result.success} tasks imported</p>
+                {result.skipped > 0 && <p className="text-xs text-amber-600 font-medium">{result.skipped} duplicates skipped</p>}
                 {result.failed > 0 && <p className="text-xs text-red-500">{result.failed} failed</p>}
+                {result.duplicates && result.duplicates.length > 0 && (
+                  <div className="mt-2 text-[10px] text-gray-500 max-h-20 overflow-y-auto border-t border-green-100 pt-1">
+                    <p className="font-semibold uppercase tracking-wider mb-1">Skipped:</p>
+                    <ul className="list-disc list-inside">
+                      {result.duplicates.slice(0, 5).map((d, i) => <li key={i}>{d}</li>)}
+                      {result.duplicates.length > 5 && <li>...and {result.duplicates.length - 5} more</li>}
+                    </ul>
+                  </div>
+                )}
               </div>
               <Button size="sm" variant="outline" onClick={() => setResult(null)} className="ml-auto text-xs">Import More</Button>
             </div>

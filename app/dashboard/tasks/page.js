@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, RefreshCw, Link2 } from 'lucide-react'
 
 const STATUS_OPTIONS = ['To Be Started', 'In Progress', 'To Be Approved', 'Completed', 'Recurring', 'Blocked']
@@ -102,8 +103,8 @@ function EditableCell({ value, type = 'text', options = [], onSave }) {
 
 function LinkCell({ value, onSave }) {
   const [editing, setEditing] = useState(false)
-  const [val, setVal]         = useState(value || '')
-  const inputRef              = useRef(null)
+  const [val, setVal] = useState(value || '')
+  const inputRef = useRef(null)
 
   useEffect(() => setVal(value || ''), [value])
   useEffect(() => { if (editing && inputRef.current) inputRef.current.focus() }, [editing])
@@ -166,7 +167,7 @@ function LinkCell({ value, onSave }) {
   )
 }
 
-export default function AllTasksPage() {
+export default function AllTasksPage({ initialAssigneeId }) {
   const [tasks, setTasks] = useState([])
   const [clients, setClients] = useState([])
   const [members, setMembers] = useState([])
@@ -181,10 +182,10 @@ export default function AllTasksPage() {
   const [filterClient, setFilterClient] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
-  const [filterAssignee, setFilterAssignee] = useState('all')
+  const [filterAssignee, setFilterAssignee] = useState(initialAssigneeId || 'all')
   const [filterPriority, setFilterPriority] = useState('all')
   const [sortField, setSortField] = useState('created_at')
-  const [sortDir, setSortDir]     = useState('desc')
+  const [sortDir, setSortDir] = useState('desc')
 
   const loadData = async () => {
     const params = new URLSearchParams()
@@ -269,8 +270,8 @@ export default function AllTasksPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">All Tasks</h1>
-          <p className="text-gray-500 text-sm mt-1">{tasks.length} tasks across all clients</p>
+          <h1 className="text-2xl font-bold text-gray-900">{initialAssigneeId ? 'My Tasks' : 'All Tasks'}</h1>
+          <p className="text-gray-500 text-sm mt-1">{initialAssigneeId ? 'Your assigned work across all clients' : 'Master list of work for all agency clients'}</p>
         </div>
         <Button variant="outline" size="sm" onClick={loadData} className="gap-1">
           <RefreshCw className="w-4 h-4" /> Refresh
@@ -389,70 +390,83 @@ export default function AllTasksPage() {
               <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
             ) : sorted.length === 0 ? (
               <tr><td colSpan={12} className="px-4 py-8 text-center text-gray-400">No tasks found</td></tr>
-            ) : sorted.map(task => (
-              <tr key={task.id} className={`hover:bg-gray-50 group ${selected.includes(task.id) ? 'bg-blue-50' : ''}`}>
-                <td className="px-3 py-1.5">
-                  <Checkbox checked={selected.includes(task.id)} onCheckedChange={() => toggleSelect(task.id)} />
-                </td>
-                <td className="px-3 py-1.5">
-                  <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                    {task.client_name || '?'}
-                  </span>
-                </td>
-                <td className="px-3 py-1.5">
-                  <EditableCell value={task.title} onSave={v => updateTask(task.id, 'title', v)} />
-                </td>
-                <td className="px-3 py-1.5">
-                  <EditableCell value={task.category} type="select" options={CATEGORY_OPTIONS} onSave={v => updateTask(task.id, 'category', v)} />
-                </td>
-                <td className="px-3 py-1.5">
-                  <EditableCell value={task.status} type="status" options={STATUS_OPTIONS} onSave={v => updateTask(task.id, 'status', v)} />
-                </td>
-                <td className="px-3 py-1.5">
-                  <EditableCell value={task.priority} type="priority" options={PRIORITY_OPTIONS} onSave={v => updateTask(task.id, 'priority', v)} />
-                </td>
-                <td className="px-3 py-1.5">
-                  <EditableCell
-                    value={memberMap[task.assigned_to] || ''}
-                    type="select"
-                    options={members.map(m => m.name)}
-                    onSave={v => {
-                      const member = members.find(m => m.name === v)
-                      updateTask(task.id, 'assigned_to', member?.id || null)
-                    }}
-                  />
-                </td>
-                <td className="px-3 py-1.5">
-                  <EditableCell value={task.eta_end} type="date" onSave={v => updateTask(task.id, 'eta_end', v)} />
-                </td>
-                <td className="px-3 py-1.5">
-                  {/* Client Approval badge (read-only in internal view — team sets it via client detail) */}
-                  {task.client_approval && task.client_approval !== 'Pending Review' ? (
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
-                      task.client_approval === 'Approved'
+            ) : sorted.map(task => {
+              const overdueDate = task.eta_end ? new Date(task.eta_end) : null
+              const isOverdue = overdueDate && overdueDate < new Date() && task.status !== 'Completed'
+              const needsFix = task.client_approval === 'Required Changes'
+
+              return (
+                <tr key={task.id} className={`hover:bg-gray-50 group ${selected.includes(task.id) ? 'bg-blue-50' : ''} ${isOverdue ? 'bg-red-50/70' : ''} ${needsFix ? 'bg-amber-50/70' : ''}`}>
+                  <td className="px-3 py-1.5">
+                    <Checkbox checked={selected.includes(task.id)} onCheckedChange={() => toggleSelect(task.id)} />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                      {task.client_name || '?'}
+                    </span>
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <div className="flex items-center gap-2">
+                      <EditableCell value={task.title} onSave={v => updateTask(task.id, 'title', v)} />
+                      {isOverdue && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 uppercase">Overdue</Badge>
+                      )}
+                      {needsFix && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 uppercase border-amber-200 bg-amber-100 text-amber-700">Approval Req</Badge>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <EditableCell value={task.category} type="select" options={CATEGORY_OPTIONS} onSave={v => updateTask(task.id, 'category', v)} />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <EditableCell value={task.status} type="status" options={STATUS_OPTIONS} onSave={v => updateTask(task.id, 'status', v)} />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <EditableCell value={task.priority} type="priority" options={PRIORITY_OPTIONS} onSave={v => updateTask(task.id, 'priority', v)} />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <EditableCell
+                      value={memberMap[task.assigned_to] || ''}
+                      type="select"
+                      options={members.map(m => m.name)}
+                      onSave={v => {
+                        const member = members.find(m => m.name === v)
+                        updateTask(task.id, 'assigned_to', member?.id || null)
+                      }}
+                    />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <EditableCell value={task.eta_end} type="date" onSave={v => updateTask(task.id, 'eta_end', v)} />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    {/* Client Approval badge (read-only in internal view — team sets it via client detail) */}
+                    {task.client_approval && task.client_approval !== 'Pending Review' ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${task.client_approval === 'Approved'
                         ? 'bg-green-100 text-green-700 border-green-200'
                         : 'bg-red-100 text-red-700 border-red-200'
-                    }`}>{task.client_approval}</span>
-                  ) : (
-                    <span className="text-xs text-gray-300">Pending</span>
-                  )}
-                </td>
-                <td className="px-3 py-1.5">
-                  <LinkCell value={task.link_url} onSave={v => updateTask(task.id, 'link_url', v)} />
-                </td>
-                <td className="px-3 py-1.5">
-                  <EditableCell value={task.remarks} onSave={v => updateTask(task.id, 'remarks', v)} />
-                </td>
-                <td className="px-3 py-1.5">
-                  <button
-                    onClick={() => deleteTask(task.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-red-400 transition-all"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                        }`}>{task.client_approval}</span>
+                    ) : (
+                      <span className="text-xs text-gray-300">Pending</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <LinkCell value={task.link_url} onSave={v => updateTask(task.id, 'link_url', v)} />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <EditableCell value={task.remarks} onSave={v => updateTask(task.id, 'remarks', v)} />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <button
+                      onClick={() => deleteTask(task.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-red-400 transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
 
             {/* Quick Add Row */}
             <tr className="bg-gray-50 border-t border-dashed border-gray-200">

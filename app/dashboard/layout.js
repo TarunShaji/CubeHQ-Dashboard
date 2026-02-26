@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/dashboard/my-tasks', label: 'My Tasks', icon: FolderOpen },
   { href: '/dashboard/clients', label: 'Clients', icon: Users },
   { href: '/dashboard/tasks', label: 'All Tasks', icon: CheckSquare },
   { href: '/dashboard/team', label: 'Team', icon: UserCircle },
@@ -48,9 +49,8 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
-      <aside className={`${
-        sidebarOpen ? 'w-56' : 'w-16'
-      } bg-white border-r border-gray-200 flex flex-col transition-all duration-200 flex-shrink-0`}>
+      <aside className={`${sidebarOpen ? 'w-56' : 'w-16'
+        } bg-white border-r border-gray-200 flex flex-col transition-all duration-200 flex-shrink-0`}>
         {/* Logo */}
         <div className="h-16 flex items-center px-4 border-b border-gray-100">
           <div className="flex items-center gap-3 min-w-0">
@@ -75,15 +75,13 @@ export default function DashboardLayout({ children }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                isActive(item)
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive(item)
                   ? 'bg-blue-50 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
+                }`}
             >
-              <item.icon className={`w-4 h-4 flex-shrink-0 ${
-                isActive(item) ? 'text-blue-700' : 'text-gray-400'
-              }`} />
+              <item.icon className={`w-4 h-4 flex-shrink-0 ${isActive(item) ? 'text-blue-700' : 'text-gray-400'
+                }`} />
               {sidebarOpen && <span className="truncate">{item.label}</span>}
             </Link>
           ))}
